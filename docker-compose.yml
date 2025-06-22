@@ -1,0 +1,86 @@
+services:
+  kafka:
+    image: docker.io/bitnami/kafka:4.0
+    container_name: kafka
+    volumes:
+      - "kafka_data:/bitnami"
+    environment:
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://172.19.0.4:9092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+    networks:
+      kafka-network:
+        ipv4_address: 172.19.0.4
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - 8085:8080
+    depends_on:
+      - kafka
+    networks:
+      - kafka-network
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: 'true'
+
+  kroxylicious:
+    image: quay.io/kroxylicious/kroxylicious:0.12.0
+    container_name: kroxylicious
+    command: "-c /opt/kroxylicious-config.yaml"
+    volumes:
+      - "./kroxylicious-config.yaml:/opt/kroxylicious-config.yaml"
+    secrets:
+      - vault_token
+    networks:
+      kafka-network:
+        ipv4_address: 172.19.0.10
+      kroxylicious-network:
+        ipv4_address: 172.20.0.6
+
+  openbao:
+    image: openbao/openbao:latest
+    container_name: openbao
+    environment:
+      BAO_LOG_LEVEL: info
+      BAO_STORAGE_TYPE: raft
+      BAO_STORAGE_RAFT_PATH: /bao/data
+      BAO_CLUSTER_ADDR: "http://0.0.0.0:8201"
+      BAO_API_ADDR: "http://0.0.0.0:8200"
+      BAO_UI: "true"
+      BAO_DEV_ROOT_TOKEN_ID: "root"
+    ports:
+      - "8200:8200"
+    volumes:
+      - bao_data:/bao/data
+    networks:
+      - kroxylicious-network
+
+secrets:
+  vault_token:
+    file: ./kroxylicious_vault_token
+
+volumes:
+  kafka_data:
+    driver: local
+  bao_data:
+    driver: local
+
+networks:
+  kafka-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/24
+  kroxylicious-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24

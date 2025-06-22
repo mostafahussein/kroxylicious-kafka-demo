@@ -1,0 +1,27 @@
+---
+management:
+  endpoints:
+    prometheus: {}
+filterDefinitions: 
+  - name: encryption
+    type: RecordEncryption 
+    config: 
+      kms: VaultKmsService
+      kmsConfig:
+        vaultTransitEngineUrl: http://openbao:8200/v1/transit
+        vaultToken:
+          passwordFile: /run/secrets/vault_token
+      selector: TemplateKekSelector
+      selectorConfig:
+        template: KEK_kroxylicious
+      unresolvedKeyPolicy: REJECT
+defaultFilters:
+  - encryption
+virtualClusters:
+  - name: kafka
+    targetCluster:
+      bootstrapServers: kafka:9092
+    gateways:
+    - name: kafka-gateway
+      portIdentifiesNode:
+        bootstrapAddress: 172.20.0.6:9192

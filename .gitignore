@@ -1,0 +1,35 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go build output
+/bin/
+/build/
+/dist/
+*.o
+
+# Dependency directories (in case you use vendoring)
+vendor/
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Env and secrets
+.env
+*.env
+*.secret
+kroxylicious_vault_token
